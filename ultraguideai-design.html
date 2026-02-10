@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UltraGuideAI - AI Search Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #0a0e27;
+        }
+
+        #canvas3d {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .browser-window {
+            width: 90%;
+            max-width: 650px;
+            background: rgba(10, 15, 35, 0.85);
+            border-radius: 12px;
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            transform-style: preserve-3d;
+            transition: transform 0.3s ease;
+        }
+
+        .browser-header {
+            background: rgba(15, 20, 40, 0.9);
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 0;
+            border-bottom: 1px solid rgba(100, 150, 255, 0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .browser-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .dot-red { background: #ff5f57; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #28ca42; }
+
+        .browser-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            margin-left: 20px;
+        }
+
+        .nav-icon {
+            width: 24px;
+            height: 24px;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+        }
+
+        .address-bar {
+            flex: 1;
+            background: rgba(30, 40, 70, 0.5);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            border-radius: 6px;
+            padding: 6px 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 13px;
+        }
+
+        .browser-content {
+            padding: 50px 40px;
+        }
+
+        .search-container {
+            margin-bottom: 40px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: rgba(20, 30, 60, 0.6);
+            border: 2px solid rgba(100, 150, 255, 0.3);
+            border-radius: 50px;
+            padding: 18px 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-box::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, #667eea, #764ba2, #f093fb, #4facfe);
+            border-radius: 50px;
+            opacity: 0;
+            z-index: -1;
+            transition: opacity 0.3s ease;
+        }
+
+        .search-box:hover::before,
+        .search-box:focus-within::before {
+            opacity: 0.3;
+        }
+
+        .search-box:hover,
+        .search-box:focus-within {
+            border-color: rgba(150, 180, 255, 0.6);
+            box-shadow: 0 0 30px rgba(100, 150, 255, 0.3);
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 18px;
+            font-weight: 300;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .search-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(118, 75, 162, 0.6);
+        }
+
+        .search-icon {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+
+        .info-section h1 {
+            font-size: 38px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 15px;
+        }
+
+        .info-section p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+
+        .feature-icon {
+            width: 18px;
+            height: 18px;
+            color: #667eea;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .glow-orb {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            pointer-events: none;
+            filter: blur(80px);
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        .orb-1 {
+            background: radial-gradient(circle, #667eea, transparent);
+            top: 20%;
+            right: 15%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .orb-2 {
+            background: radial-gradient(circle, #f093fb, transparent);
+            bottom: 20%;
+            left: 10%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+    </style>
+</head>
+<body>
+    <!-- Glowing orbs -->
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Particles background -->
+    <div class="particles" id="particles"></div>
+
+    <!-- 3D Canvas -->
+    <canvas id="canvas3d"></canvas>
+
+    <!-- Main content -->
+    <div class="content">
+        <div class="browser-window" id="browserWindow">
+            <!-- Browser header -->
+            <div class="browser-header">
+                <div class="browser-dots">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                </div>
+                <div class="browser-toolbar">
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                    <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <div class="address-bar">https://ultraguideai.com</div>
+                </div>
+            </div>
+
+            <!-- Browser content -->
+            <div class="browser-content">
+                <!-- Search box -->
+                <div class="search-container">
+                    <div class="search-box">
+                        <input type="text" class="search-input" placeholder="ultraguideai.com" />
+                        <button class="search-button">
+                            <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info section -->
+                <div class="info-section">
+                    <h1>UltraGuideAI</h1>
+                    <p>Powered by OpenAI | Next-Gen AI - Discover where you want more answers. AI-powered search engine drives an ever-evolving intelligence that learns from user interaction to deliver personalized results.</p>
+                    
+                    <div class="features">
+                        <div class="feature-item">
+                            <svg class="feature-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>AI-Driven Search Results - Get real-time insights with ever-evolving AI</span>
+                        </div>
+                        <div class="feature-item">
+                            <svg class="feature-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Smart Query Understanding - Our AI adapts and learns from each interaction</span>
+                        </div>
+                        <div class="feature-item">
+                            <svg class="feature-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Personalized Experience - Delivers answers tailored to your search history</span>
+                        </div>
+                        <div class="feature-item">
+                            <svg class="feature-icon" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span>Fast Results - Get instant AI-generated answers</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 100; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 3 + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // Three.js 3D Brain
+        const canvas = document.getElementById('canvas3d');
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        
+        camera.position.z = 5;
+        camera.position.x = 3;
+
+        // Create brain geometry
+        const brainGeometry = new THREE.IcosahedronGeometry(1.5, 2);
+        const brainMaterial = new THREE.MeshStandardMaterial({
+            color: 0x667eea,
+            wireframe: true,
+            wireframeLinewidth: 2,
+            emissive: 0x667eea,
+            emissiveIntensity: 0.3
+        });
+        const brain = new THREE.Mesh(brainGeometry, brainMaterial);
+        brain.position.x = 3;
+        scene.add(brain);
+
+        // Inner glow sphere
+        const glowGeometry = new THREE.SphereGeometry(1.8, 32, 32);
+        const glowMaterial = new THREE.MeshBasicMaterial({
+            color: 0xf093fb,
+            transparent: true,
+            opacity: 0.15,
+            wireframe: true
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        glow.position.x = 3;
+        scene.add(glow);
+
+        // Lights
+        const pointLight1 = new THREE.PointLight(0x667eea, 2, 100);
+        pointLight1.position.set(5, 5, 5);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xf093fb, 1.5, 100);
+        pointLight2.position.set(-5, -5, 5);
+        scene.add(pointLight2);
+
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        // Particles system
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1000;
+        const posArray = new Float32Array(particlesCount * 3);
+
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 15;
+        }
+
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.02,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+        const browserWindow = document.getElementById('browserWindow');
+
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Parallax effect on browser window
+            const xRotation = mouseY * 5;
+            const yRotation = mouseX * 5;
+            browserWindow.style.transform = `rotateX(${xRotation}deg) rotateY(${yRotation}deg)`;
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate brain
+            brain.rotation.y += 0.005;
+            brain.rotation.x += 0.003;
+            
+            glow.rotation.y -= 0.003;
+            glow.rotation.x -= 0.002;
+
+            // Rotate particles
+            particlesMesh.rotation.y += 0.001;
+
+            // Mouse follow effect
+            brain.rotation.y += (mouseX * 0.5 - brain.rotation.y) * 0.05;
+            brain.rotation.x += (mouseY * 0.5 - brain.rotation.x) * 0.05;
+
+            // Animate lights
+            pointLight1.position.x = Math.sin(Date.now() * 0.001) * 5;
+            pointLight2.position.z = Math.cos(Date.now() * 0.0008) * 5;
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Search functionality
+        const searchInput = document.querySelector('.search-input');
+        const searchButton = document.querySelector('.search-button');
+
+        searchButton.addEventListener('click', () => {
+            if (searchInput.value.trim()) {
+                alert('البحث عن: ' + searchInput.value);
+            }
+        });
+
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && searchInput.value.trim()) {
+                alert('البحث عن: ' + searchInput.value);
+            }
+        });
+    </script>
+</body>
+</html>
